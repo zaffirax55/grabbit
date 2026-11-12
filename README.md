@@ -1,22 +1,22 @@
-# Grabbit — Video Downloader
+# Grabbit — завантаження відео
 
-Paste a TikTok, Instagram or Twitter / X link and download the video as MP4.
+Вставте посилання з TikTok, Instagram або Twitter / X і завантажте відео у форматі MP4.
 
-## Run locally
+## Локальний запуск
 
-1. Install [Node.js](https://nodejs.org) (v18+).
-2. Download [yt-dlp](https://github.com/yt-dlp/yt-dlp/releases/latest) and put `yt-dlp.exe` (Windows) or `yt-dlp` (macOS/Linux) into the `bin/` folder — or have it on your `PATH`.
-3. Start the server:
+1. Встановіть [Node.js](https://nodejs.org) (v18+).
+2. Завантажте [yt-dlp](https://github.com/yt-dlp/yt-dlp/releases/latest) і покладіть `yt-dlp.exe` (Windows) або `yt-dlp` (macOS/Linux) у папку `bin/` — або додайте його в `PATH`.
+3. Запустіть сервер:
 
 ```bash
 node server.js
 ```
 
-Then open http://localhost:3000. On Windows you can just double-click `start.bat`.
+Потім відкрийте http://localhost:3000. На Windows можна просто двічі клацнути `start.bat`.
 
-Keep yt-dlp up to date when a platform changes: `bin/yt-dlp.exe -U`.
+Якщо платформа щось змінила і відео перестали завантажуватися, оновіть yt-dlp: `bin/yt-dlp.exe -U`.
 
-## Notes
+## Примітки
 
-- Only public videos are supported. Some Instagram Reels require login and can't be fetched.
-- For personal use only — respect copyright and creators.
+- Підтримуються лише публічні відео. Деякі Reels в Instagram потребують входу в акаунт і не завантажуються.
+- Лише для особистого використання — поважайте авторські права.

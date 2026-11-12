@@ -41,13 +41,13 @@ function runYtDlp(args, timeoutMs = 120000) {
     proc.stderr.on("data", (d) => (err += d));
     proc.on("error", (e) => {
       clearTimeout(timer);
-      reject(new Error(e.code === "ENOENT" ? "yt-dlp not found. Put yt-dlp.exe into the bin folder." : e.message));
+      reject(new Error(e.code === "ENOENT" ? "yt-dlp не знайдено. Покладіть yt-dlp.exe у папку bin." : e.message));
     });
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0) resolve(out);
       else {
-        const line = err.split("\n").reverse().find((l) => l.includes("ERROR")) || err.trim().split("\n").pop() || "unknown error";
+        const line = err.split("\n").reverse().find((l) => l.includes("ERROR")) || err.trim().split("\n").pop() || "невідома помилка";
         reject(new Error(line.replace(/^ERROR:\s*/, "")));
       }
     });
@@ -83,7 +83,7 @@ async function handleInfo(req, res) {
     body = JSON.parse(await readBody(req));
   } catch {}
   const p = detectPlatform(body.url);
-  if (!p) return sendJson(res, 400, { error: "Please paste a TikTok, Instagram or Twitter / X link." });
+  if (!p) return sendJson(res, 400, { error: "Вставте посилання з TikTok, Instagram або Twitter / X." });
   try {
     const raw = await runYtDlp(["-J", "--no-playlist", "--no-warnings", "--", p.url]);
     const j = JSON.parse(raw);
@@ -91,7 +91,7 @@ async function handleInfo(req, res) {
     sendJson(res, 200, {
       platform: p.name,
       url: p.url,
-      title: v.title || v.description || "Video",
+      title: v.title || v.description || "Відео",
       uploader: v.uploader || v.channel || "",
       duration: v.duration || null,
       thumbnail: v.thumbnail || null,
@@ -99,13 +99,13 @@ async function handleInfo(req, res) {
       height: v.height || null,
     });
   } catch (e) {
-    sendJson(res, 422, { error: "Couldn’t fetch this video: " + e.message });
+    sendJson(res, 422, { error: "Не вдалося отримати відео: " + e.message });
   }
 }
 
 async function handleDownload(req, res, query) {
   const p = detectPlatform(query.get("url"));
-  if (!p) return sendJson(res, 400, { error: "Invalid link." });
+  if (!p) return sendJson(res, 400, { error: "Невірне посилання." });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vdl-"));
   const cleanup = () => fs.rm(dir, { recursive: true, force: true }, () => {});
   try {
@@ -114,7 +114,7 @@ async function handleDownload(req, res, query) {
       300000
     );
     const file = fs.readdirSync(dir).map((f) => path.join(dir, f)).find((f) => fs.statSync(f).isFile());
-    if (!file) throw new Error("file was not downloaded");
+    if (!file) throw new Error("файл не завантажився");
     const ext = path.extname(file) || ".mp4";
     const name = safeName(query.get("name")) + ext;
     res.writeHead(200, {
@@ -128,7 +128,7 @@ async function handleDownload(req, res, query) {
     res.on("close", cleanup);
   } catch (e) {
     cleanup();
-    sendJson(res, 422, { error: "Download failed: " + e.message });
+    sendJson(res, 422, { error: "Помилка завантаження: " + e.message });
   }
 }
 
