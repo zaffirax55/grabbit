@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grabbit — Video Downloader</title>
+<meta name="description" content="Download TikTok, Instagram and Twitter / X videos as MP4. No watermark, no sign-up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23a78bfa'/><stop offset='1' stop-color='%23f472b6'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><path d='M16 8v12m0 0l-5-5m5 5l5-5M10 24h12' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root {
+    --bg: #07070c;
+    --surface: rgba(255,255,255,.04);
+    --surface-2: rgba(255,255,255,.07);
+    --border: rgba(255,255,255,.09);
+    --border-strong: rgba(255,255,255,.16);
+    --text: #f4f4f8;
+    --muted: #9a9ab0;
+    --dim: #6b6b80;
+    --a1: #a78bfa;
+    --a2: #f472b6;
+    --a3: #60a5fa;
+    --ok: #34d399;
+    --err: #fb7185;
+    --grad: linear-gradient(135deg, var(--a1), var(--a2));
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  /* ambient background */
+  .bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .45; animation: float 18s ease-in-out infinite; }
+  .b1 { width: 520px; height: 520px; background: #7c3aed; top: -180px; left: -120px; }
+  .b2 { width: 460px; height: 460px; background: #db2777; top: -100px; right: -160px; animation-delay: -6s; }
+  .b3 { width: 420px; height: 420px; background: #2563eb; bottom: -220px; left: 30%; opacity: .25; animation-delay: -12s; }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 56px 56px; opacity: .35;
+    mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 65%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 65%);
+  }
+  @keyframes float { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,30px) scale(1.08); } }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -.3px; text-decoration: none; color: var(--text); }
+  .logo-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; box-shadow: 0 6px 20px -6px var(--a2); }
+  .nav-pill { font-size: 13px; color: var(--muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 999px; background: var(--surface); }
+  .nav-pill b { color: var(--ok); font-weight: 600; }
+
+  /* hero */
+  header { text-align: center; padding: 56px 0 34px; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); padding: 6px 14px 6px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 22px; }
+  .badge span { background: var(--grad); color: #fff; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 999px; letter-spacing: .4px; }
+  h1 { font-size: clamp(38px, 7vw, 64px); line-height: 1.05; letter-spacing: -2px; margin: 0 0 16px; font-weight: 800; }
+  h1 .g { background: linear-gradient(120deg, var(--a1), var(--a2) 55%, #fb923c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { color: var(--muted); font-size: 18px; margin: 0 auto; max-width: 520px; }
+
+  /* input card */
+  .card {
+    position: relative; margin-top: 36px; padding: 10px; border-radius: 22px;
+    background: linear-gradient(var(--bg), var(--bg)) padding-box, linear-gradient(135deg, rgba(167,139,250,.55), rgba(244,114,182,.35), rgba(96,165,250,.35)) border-box;
+    border: 1px solid transparent; box-shadow: 0 30px 80px -30px rgba(167,139,250,.45);
+  }
+  form { display: flex; gap: 8px; align-items: center; }
+  .field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; }
+  .field-icon { width: 26px; height: 26px; flex-shrink: 0; display: grid; place-items: center; color: var(--dim); transition: color .2s, transform .2s; }
+  .field-icon.on { color: var(--text); transform: scale(1.1); }
+  input {
+    flex: 1; min-width: 0; height: 52px; border: 0; background: transparent; color: var(--text);
+    font: inherit; font-size: 16px; outline: none;
+  }
+  input::placeholder { color: var(--dim); }
+  .btn {
+    height: 52px; padding: 0 22px; border: 0; border-radius: 14px; font: inherit; font-weight: 600; font-size: 15px;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+    transition: transform .15s, box-shadow .2s, opacity .2s, background .2s; text-decoration: none;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: rgba(255,255,255,.1); }
+  .btn-primary { background: var(--grad); color: #fff; box-shadow: 0 10px 30px -10px var(--a2); }
+  .btn-primary:hover { box-shadow: 0 14px 36px -10px var(--a2); }
+  .btn:disabled, .btn.loading { opacity: .65; pointer-events: none; }
+
+  .platforms { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .pf { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); transition: all .2s; }
+  .pf svg { width: 15px; height: 15px; }
+  .pf.on { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+
+  /* status */
+  .status { margin-top: 18px; min-height: 22px; text-align: center; font-size: 14px; color: var(--muted); }
+  .status.err { color: var(--err); }
+  .status.ok { color: var(--ok); }
+  .spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: -3px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* skeleton + result */
+  .result { margin-top: 10px; display: none; gap: 18px; padding: 14px; border-radius: 22px; background: var(--surface); border: 1px solid var(--border); backdrop-filter: blur(12px); animation: rise .4s cubic-bezier(.2,.8,.2,1); }
+  .result.show { display: flex; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .thumb { position: relative; width: 168px; aspect-ratio: 9/16; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #111 center/cover no-repeat; }
+  .thumb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0,0,0,.65)); }
+  .dur { position: absolute; right: 8px; bottom: 8px; z-index: 1; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,.6); }
+  .play { position: absolute; inset: 0; margin: auto; z-index: 1; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.18); backdrop-filter: blur(6px); display: grid; place-items: center; }
+  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 4px 0; }
+  .tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+  .tag svg { width: 13px; height: 13px; }
+  .title { font-weight: 600; font-size: 17px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 14px; }
+  .meta span { display: inline-flex; align-items: center; gap: 5px; }
+  .actions { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions .btn-primary { flex: 1; min-width: 180px; }
+
+  /* features */
+  section { padding: 72px 0 0; }
+  h2 { text-align: center; font-size: 28px; letter-spacing: -.8px; margin: 0 0 8px; }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 32px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .step { padding: 22px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); }
+  .step-n { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: var(--surface-2); border: 1px solid var(--border-strong); margin-bottom: 14px; }
+  .step h3 { margin: 0 0 4px; font-size: 16px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .faq { display: grid; gap: 10px; }
+  details { border-radius: 16px; background: var(--surface); border: 1px solid var(--border); padding: 0 20px; }
+  summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 22px; font-weight: 400; color: var(--muted); transition: transform .2s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+
+  footer { text-align: center; color: var(--dim); font-size: 13px; padding: 64px 0 40px; }
+
+  @media (max-width: 640px) {
+    header { padding-top: 32px; }
+    form { flex-wrap: wrap; }
+    .field { flex-basis: 100%; }
+    form .btn { flex: 1; }
+    .result.show { flex-direction: column; }
+    .thumb { width: 100%; aspect-ratio: 4/3; }
+    .steps { grid-template-columns: 1fr; }
+    .nav-pill { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .blob { animation: none; } }
+</style>
+</head>
+<body>
+<div class="bg"><div class="grid"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<!-- icon sprites -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-tiktok" viewBox="0 0 24 24"><path fill="currentColor" d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.6 2.6 0 0 1-2.59-2.6 2.6 2.6 0 0 1 3.4-2.47V9.67a5.73 5.73 0 0 0-.81-.06A5.68 5.68 0 0 0 4.17 15.3 5.68 5.68 0 0 0 9.86 21a5.68 5.68 0 0 0 5.68-5.69V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3a4.3 4.3 0 0 1-3.24-1.48z"/></symbol>
+  <symbol id="i-insta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4z"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="currentColor" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.36 5.77L17.75 3zm-1.08 16.17h1.7L7.4 4.74H5.58l11.1 14.43z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M10 14a4.5 4.5 0 0 0 6.36 0l3-3a4.5 4.5 0 0 0-6.36-6.36l-1 1M14 10a4.5 4.5 0 0 0-6.36 0l-3 3a4.5 4.5 0 0 0 6.36 6.36l1-1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/></symbol>
+  <symbol id="i-hd" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M7 9v6M7 12h3.5M10.5 9v6M14 9v6h1.5a3 3 0 0 0 0-6z"/></symbol>
+</svg>
+
+<div class="wrap">
+  <nav>
+    <a class="logo" href="/">
+      <span class="logo-mark"><svg width="18" height="18"><use href="#i-down" color="#fff"/></svg></span>
+      Grabbit
+    </a>
+    <span class="nav-pill"><b>●</b> Free · No sign-up · No watermark</span>
+  </nav>
+
+  <header>
+    <div class="badge"><span>NEW</span> TikTok, Instagram &amp; X in one place</div>
+    <h1>Save any video<br><span class="g">in one click.</span></h1>
+    <p class="lead">Paste a link from TikTok, Instagram or Twitter&nbsp;/&nbsp;X and get a clean MP4 file ready to download.</p>
+
+    <div class="card">
+      <form id="f" autocomplete="off">
+        <label class="field">
+          <span class="field-icon" id="fieldIcon"><svg width="22" height="22"><use href="#i-link"/></svg></span>
+          <input id="url" type="url" placeholder="Paste video link here…" required aria-label="Video URL">
+        </label>
+        <button id="paste" type="button" class="btn btn-ghost">Paste</button>
+        <button id="go" type="submit" class="btn btn-primary">Get video</button>
+      </form>
+    </div>
+
+    <div class="platforms">
+      <span class="pf" data-p="tiktok"><svg><use href="#i-tiktok"/></svg>TikTok</span>
+      <span class="pf" data-p="insta"><svg><use href="#i-insta"/></svg>Instagram</span>
+      <span class="pf" data-p="x"><svg><use href="#i-x"/></svg>Twitter / X</span>
+    </div>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <div id="result" class="result" style="text-align:left">
+      <div id="thumb" class="thumb">
+        <div class="play"><svg width="18" height="18"><use href="#i-play"/></svg></div>
+        <span id="dur" class="dur" hidden></span>
+      </div>
+      <div class="info">
+        <span id="tag" class="tag"></span>
+        <div id="title" class="title"></div>
+        <div id="meta" class="meta"></div>
+        <div class="actions">
+          <a id="dl" class="btn btn-primary" href="#"><svg width="18" height="18"><use href="#i-down"/></svg>Download MP4</a>
+          <button id="again" type="button" class="btn btn-ghost">New link</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>How it works</h2>
+    <p class="sub">Three steps, about ten seconds.</p>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><h3>Copy the link</h3><p>Hit “Share” → “Copy link” on any TikTok, Reel or tweet.</p></div>
+      <div class="step"><div class="step-n">2</div><h3>Paste it here</h3><p>Drop it in the box above — we’ll find the video and show a preview.</p></div>
+      <div class="step"><div class="step-n">3</div><h3>Download</h3><p>Get an MP4 with sound in the best available quality.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>FAQ</h2>
+    <p class="sub">Quick answers to common questions.</p>
+    <div class="faq">
+      <details><summary>Is it free?</summary><p>Yes. No account, no limits, no ads.</p></details>
+      <details><summary>Why can’t some Instagram videos be downloaded?</summary><p>Private accounts and some Reels require being logged in, so they can’t be fetched. Public posts usually work fine.</p></details>
+      <details><summary>What quality do I get?</summary><p>The best single file that already includes audio — typically 720p–1080p depending on the source.</p></details>
+      <details><summary>Can I download from private accounts?</summary><p>No. Only publicly available videos are supported. Please respect creators’ rights.</p></details>
+    </div>
+  </section>
+
+  <footer>Grabbit · For personal use only. Respect copyright and creators.</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PLATFORMS = [
+  { key: "tiktok", re: /(^|\.)tiktok\.com$/i, icon: "i-tiktok", name: "TikTok" },
+  { key: "insta",  re: /(^|\.)instagram\.com$/i, icon: "i-insta", name: "Instagram" },
+  { key: "x",      re: /(^|\.)(twitter|x)\.com$/i, icon: "i-x", name: "Twitter / X" },
+];
+const detect = (v) => { try { const h = new URL(v.trim()).hostname; return PLATFORMS.find((p) => p.re.test(h)) || null; } catch { return null; } };
+const icon = (id, s = 16) => `<svg width="${s}" height="${s}"><use href="#${id}"/></svg>`;
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtDur = (s) => s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}` : "";
+function status(html, kind = "") { $("status").innerHTML = html; $("status").className = "status " + kind; }
+
+function highlight() {
+  const p = detect($("url").value);
+  document.querySelectorAll(".pf").forEach((el) => el.classList.toggle("on", !!p && el.dataset.p === p.key));
+  $("fieldIcon").innerHTML = icon(p ? p.icon : "i-link", 22);
+  $("fieldIcon").classList.toggle("on", !!p);
+}
+$("url").addEventListener("input", highlight);
+
+$("paste").onclick = async () => {
+  try {
+    $("url").value = (await navigator.clipboard.readText()).trim();
+    highlight();
+    $("f").requestSubmit();
+  } catch { $("url").focus(); }
+};
+
+$("again").onclick = () => {
+  $("result").classList.remove("show");
+  $("url").value = ""; highlight(); status(""); $("url").focus();
+};
+
+$("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const url = $("url").value.trim();
+  if (!detect(url)) return status("That doesn’t look like a TikTok, Instagram or Twitter / X link.", "err");
+  $("result").classList.remove("show");
+  $("go").disabled = true;
+  $("go").innerHTML = '<span class="spinner"></span>Searching';
+  status("");
+  try {
+    const r = await fetch("/api/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    const p = detect(d.url) || PLATFORMS[0];
+    $("tag").innerHTML = icon(p.icon, 13) + esc(d.platform);
+    $("title").textContent = d.title;
+    $("meta").innerHTML = [
+      d.uploader && `<span>${icon("i-user", 14)}${esc(d.uploader)}</span>`,
+      d.height && `<span>${icon("i-hd", 14)}${esc(d.height)}p</span>`,
+    ].filter(Boolean).join("");
+    $("dur").hidden = !d.duration; $("dur").textContent = fmtDur(d.duration);
+    $("thumb").style.backgroundImage = d.thumbnail ? `url("${d.thumbnail.replace(/"/g, "%22")}")` : "";
+    $("dl").href = "/api/download?" + new URLSearchParams({ url: d.url, name: d.title });
+    $("result").classList.add("show");
+  } catch (err) {
+    status(esc(err.message || "Something went wrong."), "err");
+  } finally {
+    $("go").disabled = false;
+    $("go").textContent = "Get video";
+  }
+};
+
+$("dl").onclick = async (e) => {
+  e.preventDefault();
+  const a = $("dl");
+  a.classList.add("loading");
+  a.innerHTML = '<span class="spinner"></span>Preparing file…';
+  status("");
+  try {
+    const r = await fetch(a.href);
+    if (!r.ok) throw new Error((await r.json()).error);
+    const blob = await r.blob();
+    const m = (r.headers.get("Content-Disposition") || "").match(/filename\*=UTF-8''([^;]+)/);
+    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: m ? decodeURIComponent(m[1]) : "video.mp4" });
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    status(`Done — ${(blob.size / 1048576).toFixed(1)} MB saved ✓`, "ok");
+  } catch (err) {
+    status(esc(err.message || "Download failed."), "err");
+  } finally {
+    a.classList.remove("loading");
+    a.innerHTML = icon("i-down", 18) + "Download MP4";
+  }
+};
+</script>
+</body>
+</html>
